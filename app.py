@@ -18,16 +18,12 @@ if st.button("Solve"):
         with st.spinner("Thinking..."):
             result = solve(question)
 
-        if result["status"] == "success":
-            st.success("Answer")
-            st.write(f"**{result['answer']}**")
-            st.caption(result["reasoning_visible_to_user"])
+        # ✅ SHOW ONLY REQUIRED FIELDS
+        st.json({
+            "answer": result["answer"],
+            "status": result["status"],
+            "reasoning_visible_to_user": result["reasoning_visible_to_user"]
+        })
 
-            with st.expander("Metadata"):
-                st.json(result["metadata"])
-        else:
-            st.error("Failed")
-            st.write(result["reasoning_visible_to_user"])
-        st.json(result)   # 👈 FULL JSON OUTPUT
     else:
         st.warning("Please enter a question.")
