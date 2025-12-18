@@ -28,5 +28,6 @@ if st.button("Solve"):
         else:
             st.error("Failed")
             st.write(result["reasoning_visible_to_user"])
+        st.json(result)   # 👈 FULL JSON OUTPUT
     else:
         st.warning("Please enter a question.")
