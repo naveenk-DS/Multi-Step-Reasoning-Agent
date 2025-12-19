@@ -4,43 +4,74 @@ from agent.agent import solve
 st.set_page_config(
     page_title="Multi-Step Reasoning Agent",
     page_icon="🧠",
-    layout="centered"
+    layout="wide"
 )
 
-st.title("🧠 Multi-Step Reasoning Agent")
-st.caption("Planner → Step-by-Step Plan → Executor")
+# ---------- SESSION STATE ----------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-question = st.text_input(
-    "",
-    placeholder="Ask a math or logic question..."
-)
+# ---------- TITLE ----------
+st.markdown("<h2 style='text-align:center;'>🧠 Multi-Step Reasoning Agent</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Planner → Executor → Verifier</p>", unsafe_allow_html=True)
+st.divider()
+
+# ---------- CHAT HISTORY ----------
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        st.markdown("### 🧑 User")
+        st.info(msg["content"])
+    else:
+        st.markdown("### 🤖 Agent")
+        for line in msg["content"]:
+            st.write(line)
+
+# ---------- BOTTOM INPUT ----------
+st.divider()
+question = st.chat_input("Ask a math or logic question...")
 
 if question:
-    # User message
-    st.markdown("### 🧑 User")
-    st.info(question)
+    # Save user message
+    st.session_state.messages.append({
+        "role": "user",
+        "content": question
+    })
 
-    # Agent working
-    st.markdown("### 🤖 Agent")
-    with st.spinner("Agent is working..."):
+    agent_output = []
+
+    # -------- PLANNER --------
+    agent_output.append("**🧠 Planner:**")
+    agent_output.append("Thinking of a plan...")
+
+    with st.spinner("Planner is working..."):
         result = solve(question)
 
-    # Planner
-    st.markdown("### 🧠 Planner")
-    st.success("Plan created")
+    agent_output.append("✅ Plan created.")
 
+    # -------- STEP-BY-STEP PLAN --------
     plan = result.get("metadata", {}).get("plan", [])
     if plan:
-        st.markdown("**Step-by-step plan:**")
+        agent_output.append("")
+        agent_output.append("**📋 Step-by-Step Plan:**")
         for i, step in enumerate(plan, 1):
-            st.write(f"{i}. {step}")
+            agent_output.append(f"{i}. {step}")
 
-    # Executor
-    st.markdown("### ⚙️ Executor")
-    st.info("Executing the plan...")
+    # -------- EXECUTOR --------
+    agent_output.append("")
+    agent_output.append("**⚙️ Executor:**")
+    agent_output.append("Executing steps...")
 
-    # Final Answer
-    st.markdown("### ✅ Final Answer")
-    st.success(result["answer"])
+    # -------- FINAL ANSWER --------
+    agent_output.append("")
+    agent_output.append("**✅ Final Answer:**")
+    agent_output.append(f"**{result['answer']}**")
+    agent_output.append(result["reasoning_visible_to_user"])
 
-    st.caption(result["reasoning_visible_to_user"])
+    # Save agent response
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": agent_output
+    })
+
+    # Rerun to display new messages
+    st.rerun()
