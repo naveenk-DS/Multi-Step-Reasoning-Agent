@@ -1,6 +1,6 @@
+import time
 import streamlit as st
 from agent.agent import solve
-import uuid
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -10,105 +10,86 @@ st.set_page_config(
 )
 
 # ---------------- SESSION STATE ----------------
-if "chats" not in st.session_state:
-    st.session_state.chats = {}
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-if "active_chat" not in st.session_state:
-    st.session_state.active_chat = None
+# ---------------- TITLE ----------------
+st.markdown(
+    "<h2 style='text-align:center;'>🧠 Multi-Step Reasoning Agent</h2>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<p style='text-align:center;'>Planner → Executor → Verifier</p>",
+    unsafe_allow_html=True
+)
+st.divider()
 
-# ---------------- HELPERS ----------------
-def new_chat():
-    chat_id = str(uuid.uuid4())
-    st.session_state.chats[chat_id] = {
-        "title": "New Chat",
-        "messages": []
-    }
-    st.session_state.active_chat = chat_id
+# ---------------- CHAT HISTORY ----------------
+for item in st.session_state.history:
+    if item["role"] == "user":
+        st.markdown("### 🧑 User")
+        st.info(item["content"])
+    else:
+        st.markdown("### 🤖 Agent")
+        for line in item["content"]:
+            st.write(line)
 
-def add_message(role, content):
-    st.session_state.chats[
-        st.session_state.active_chat
-    ]["messages"].append({
-        "role": role,
-        "content": content
-    })
-
-# ---------------- SIDEBAR (CHATGPT STYLE) ----------------
-with st.sidebar:
-    st.markdown("## 💬 Chats")
-
-    if st.button("➕ New Chat", use_container_width=True):
-        new_chat()
-
-    st.divider()
-
-    for chat_id, chat in st.session_state.chats.items():
-        if st.button(chat["title"], key=chat_id, use_container_width=True):
-            st.session_state.active_chat = chat_id
-
-    st.divider()
-    st.caption("🧠 Multi-Step Reasoning Agent")
-
-# ---------------- MAIN AREA ----------------
-st.markdown("### 🧠 Multi-Step Reasoning Agent")
-st.caption("Planner → Executor → Verifier")
-
-if not st.session_state.active_chat:
-    st.info("Start a new chat from the sidebar")
-    st.stop()
-
-chat = st.session_state.chats[st.session_state.active_chat]
-
-# ---------------- RENDER CHAT ----------------
-for msg in chat["messages"]:
-    with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for line in msg["content"]:
-                st.markdown(line)
-        else:
-            st.markdown(msg["content"])
-
-# ---------------- INPUT (BOTTOM LIKE CHATGPT) ----------------
+# ---------------- BOTTOM INPUT ----------------
 question = st.chat_input("Ask a math or logic question...")
 
 if question:
-    # User message
-    add_message("user", question)
+    # Save user message
+    st.session_state.history.append({
+        "role": "user",
+        "content": question
+    })
 
-    # Auto title
-    if len(chat["messages"]) == 1:
-        chat["title"] = question[:30] + "..." if len(question) > 30 else question
+    # Placeholders for video-like thinking
+    planner_box = st.empty()
+    plan_box = st.empty()
+    executor_box = st.empty()
+    json_box = st.empty()
 
-    agent_lines = []
+    # ---------------- PLANNER ----------------
+    planner_box.markdown("### 🧠 Planner")
+    planner_box.info("🤔 Thinking of a plan...")
+    time.sleep(1.2)
 
-    # ---------- PLANNER ----------
-    agent_lines.append("**🧠 Planner**")
-    agent_lines.append("Thinking of a plan...")
+    # Call agent ONCE
+    result = solve(question)
 
-    with st.spinner("Agent is working..."):
-        result = solve(question)
+    planner_box.success("✅ Plan created")
+    time.sleep(0.8)
 
-    agent_lines.append("✅ Plan created.")
-
-    # ---------- PLAN ----------
+    # ---------------- STEP-BY-STEP PLAN ----------------
     plan = result.get("metadata", {}).get("plan", [])
     if plan:
-        agent_lines.append("")
-        agent_lines.append("**📋 Step-by-Step Plan**")
+        plan_box.markdown("### 📋 Step-by-Step Plan")
         for i, step in enumerate(plan, 1):
-            agent_lines.append(f"{i}. {step}")
+            plan_box.write(f"{i}. {step}")
+            time.sleep(0.6)
 
-    # ---------- EXECUTOR ----------
-    agent_lines.append("")
-    agent_lines.append("**⚙️ Executor**")
-    agent_lines.append("Executing the plan...")
+    # ---------------- EXECUTOR ----------------
+    executor_box.markdown("### ⚙️ Executor")
+    executor_box.info("⏳ Executing steps...")
+    time.sleep(1.5)
+    executor_box.success("✅ Execution completed")
 
-    # ---------- FINAL ----------
-    agent_lines.append("")
-    agent_lines.append("**✅ Final Answer**")
-    agent_lines.append(f"**{result['answer']}**")
-    agent_lines.append(result["reasoning_visible_to_user"])
+    # ---------------- FINAL JSON OUTPUT ----------------
+    json_box.markdown("### 📦 Final Output (JSON)")
+    time.sleep(0.5)
+    json_box.json(result)
 
-    add_message("assistant", agent_lines)
+    # Save clean history (for re-render)
+    st.session_state.history.append({
+        "role": "agent",
+        "content": [
+            "🧠 Planner: Thinking and plan created",
+            "📋 Step-by-step plan shown",
+            "⚙️ Executor: Execution completed",
+            "📦 Final JSON output generated"
+        ]
+    })
 
+    time.sleep(0.3)
     st.rerun()
