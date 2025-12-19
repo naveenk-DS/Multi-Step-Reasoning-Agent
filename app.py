@@ -8,47 +8,39 @@ st.set_page_config(
 )
 
 st.title("🧠 Multi-Step Reasoning Agent")
-st.caption("Planner → Executor → Verifier (Self-Checking)")
+st.caption("Planner → Step-by-Step Plan → Executor")
 
-# Chat-style input
 question = st.text_input(
-    "Ask a math or logic question...",
-    placeholder="Alice has 3 red apples and twice as many green apples as red. How many apples does she have?"
+    "",
+    placeholder="Ask a math or logic question..."
 )
 
-if st.button("▶ Run Agent"):
-
-    if not question.strip():
-        st.warning("Please enter a question.")
-        st.stop()
-
-    # ---- USER MESSAGE ----
+if question:
+    # User message
     st.markdown("### 🧑 User")
     st.info(question)
 
-    # ---- AGENT STATUS ----
-    st.markdown("### 🤖 Agent is working...")
-    with st.spinner("Thinking..."):
-
-        # Call backend
+    # Agent working
+    st.markdown("### 🤖 Agent")
+    with st.spinner("Agent is working..."):
         result = solve(question)
 
-    # ---- PLANNER ----
+    # Planner
     st.markdown("### 🧠 Planner")
     st.success("Plan created")
 
-    if "plan" in result.get("metadata", {}):
+    plan = result.get("metadata", {}).get("plan", [])
+    if plan:
         st.markdown("**Step-by-step plan:**")
-        for i, step in enumerate(result["metadata"]["plan"], 1):
+        for i, step in enumerate(plan, 1):
             st.write(f"{i}. {step}")
 
-    # ---- EXECUTOR ----
+    # Executor
     st.markdown("### ⚙️ Executor")
-    st.info("Executing plan and computing result...")
+    st.info("Executing the plan...")
 
-    # ---- FINAL ANSWER ----
+    # Final Answer
     st.markdown("### ✅ Final Answer")
     st.success(result["answer"])
 
     st.caption(result["reasoning_visible_to_user"])
-
